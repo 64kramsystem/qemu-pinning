@@ -160,6 +160,16 @@ given, the total number of CPUs @var{n} can be omitted. @var{maxcpus}
 specifies the maximum number of hotpluggable CPUs.
 ETEXI
 
+DEF("vcpu", HAS_ARG, QEMU_OPTION_vcpu,
+    "-vcpu [vcpunum=]n[,affinity=affinity]\n"
+    "-vcpu [vcpunum=]n[,affinity=affinity]\n", QEMU_ARCH_ALL)
+STEXI
+@item -vcpu [vcpunum=]@var{n}[,affinity=@var{affinity}]
+@itemx -vcpu [vcpunum=]@var{n}[,affinity=@var{affinity}]
+@findex -vcpu
+VCPU Affinity. If specified, specify for all the CPUs.
+ETEXI
+
 DEF("numa", HAS_ARG, QEMU_OPTION_numa,
     "-numa node[,mem=size][,cpus=firstcpu[-lastcpu]][,nodeid=node]\n"
     "-numa node[,memdev=id][,cpus=firstcpu[-lastcpu]][,nodeid=node]\n"
