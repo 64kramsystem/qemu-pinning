@@ -46,7 +46,7 @@ Generic format:
 
 Convenient bash script to assign one virtual CPU per core (*not per thread!*):
 
-    CORES_NUMBER=$(cat /proc/cpuinfo | egrep "core id|physical id" | tr -d "\n" | sed s/physical/\\nphysical/g | grep -v ^$ | sort | uniq | wc -l)
+    CORES_NUMBER=$(lscpu --all -p=CORE | grep -v ^# | sort | uniq | wc -l)
 
     for core_number in $(seq 1 $CORES_NUMBER); do
       VGAPT_PINNING_PARAMS=" $VGAPT_PINNING_PARAMS -vcpu vcpunum=$((core_number - 1)),affinity=$((core_number - 1))"
@@ -62,7 +62,7 @@ The following instructions will build the binary on an Ubuntu 16.04 x86-64, with
 
     sudo apt-get install git libglib2.0-dev libfdt-dev libpixman-1-dev zlib1g-dev libgtk-3-dev libpulse-dev libusb-1.0-0-dev libusbredirparser-dev
 
-    THREADS_NUMBER=$(cat /proc/cpuinfo | egrep "core id|physical id" | tr -d "\n" | sed s/physical/\\nphysical/g | grep -v ^$ | wc -l)
+    THREADS_NUMBER=$(lscpu --all -p=CPU | grep -v ^# | sort | uniq | wc -l)
 
     rm -rf bin
     mkdir -p bin/debug/native
