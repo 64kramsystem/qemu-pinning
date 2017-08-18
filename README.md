@@ -58,16 +58,16 @@ Convenient bash script to assign one virtual CPU per core (*not per thread!*):
 
 Compiling the binary is very simple.
 
-The following instructions will build the binary on an Ubuntu 16.04 x86-64, with GTK VGA, Pulseaudio, and USB support:
+The following instructions will build the binary on an Ubuntu 16.04 x86-64, with support for GTK display, SPICE/QXL VGA, PulseAudio, and USB:
 
-    sudo apt-get install git libglib2.0-dev libfdt-dev libpixman-1-dev zlib1g-dev libgtk-3-dev libpulse-dev libusb-1.0-0-dev libusbredirparser-dev
+    sudo apt-get install git libglib2.0-dev libfdt-dev libpixman-1-dev zlib1g-dev libgtk-3-dev libpulse-dev libusb-1.0-0-dev libusbredirparser-dev libspice-protocol-dev libspice-server-dev
 
     THREADS_NUMBER=$(lscpu --all -p=CPU | grep -v ^# | sort | uniq | wc -l)
 
     rm -rf bin
     mkdir -p bin/debug/native
     cd !$
-    ../../../configure --target-list=x86_64-softmmu --enable-debug --enable-gtk --audio-drv-list=pa
+    ../../../configure --target-list=x86_64-softmmu --enable-debug --enable-gtk --enable-spice --audio-drv-list=pa
     make -j $THREADS_NUMBER
     cd x86_64-softmmu
     ./qemu-system-x86_64 --version           # test!
