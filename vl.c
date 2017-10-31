@@ -132,6 +132,7 @@ int main(int argc, char **argv)
 #define MAX_VIRTIO_CONSOLES 1
 #define MAX_SCLP_CONSOLES 1
 
+#define MAX_VCPUS CPU_SETSIZE
 static const char *data_dir[16];
 static int data_dir_idx;
 const char *bios_name = NULL;
@@ -164,6 +165,8 @@ int smp_cpus;
 unsigned int max_cpus;
 int smp_cores = 1;
 int smp_threads = 1;
+int vcpu_affinity[MAX_VCPUS];
+int num_affinity = 0;
 int acpi_enabled = 1;
 int no_hpet = 0;
 int fd_bootchk = 1;
@@ -1289,6 +1292,57 @@ static QemuOptsList qemu_smp_opts = {
         { /*End of list */ }
     },
 };
+
+static QemuOptsList qemu_vcpu_opts = {
+    .name = "vcpu-opts",
+    .implied_opt_name = "vcpunum",
+    .head = QTAILQ_HEAD_INITIALIZER(qemu_vcpu_opts.head),
+    .desc = {
+        {
+            .name = "vcpunum",
+            .type = QEMU_OPT_NUMBER,
+        }, {
+            .name = "affinity",
+            .type = QEMU_OPT_NUMBER,
+        },
+        { /*End of list */ }
+    },
+};
+
+static int parse_vcpu(void *opaque, QemuOpts *opts, Error **errp)
+{
+    if (opts) {
+      unsigned vcpu = qemu_opt_get_number(opts, "vcpunum", 0);
+      unsigned affinity = qemu_opt_get_number(opts,"affinity", 0);
+
+      if (vcpu < smp_cpus * smp_cores * smp_threads) {
+        if (vcpu_affinity[vcpu] == -1) {
+          vcpu_affinity[vcpu] = affinity;
+        }
+        else {
+          error_report("Duplicate affinity statement for vcpu %d\n", vcpu);
+          return -1;
+        }
+        num_affinity += 1;
+      }
+      else {
+        error_report("VCPU %d is more than allowed %d VCPUs in the system\n", vcpu, smp_cores);
+        return -1;
+      }
+    }
+    return 0;
+}
+
+static void parse_vcpu_opts(MachineClass *mc)
+{
+    int i;
+    for (i = 0; i < MAX_VCPUS; i++)
+      vcpu_affinity[i] = -1;
+
+    if (qemu_opts_foreach(qemu_find_opts("vcpu-opts"), parse_vcpu, NULL, NULL)) {
+        exit(1);
+    }
+}
 
 static void smp_parse(QemuOpts *opts)
 {
@@ -3164,6 +3218,7 @@ int main(int argc, char **argv, char **envp)
     qemu_add_opts(&qemu_accel_opts);
     qemu_add_opts(&qemu_mem_opts);
     qemu_add_opts(&qemu_smp_opts);
+    qemu_add_opts(&qemu_vcpu_opts);
     qemu_add_opts(&qemu_boot_opts);
     qemu_add_opts(&qemu_sandbox_opts);
     qemu_add_opts(&qemu_add_fd_opts);
@@ -3913,6 +3968,12 @@ int main(int argc, char **argv, char **envp)
                     exit(1);
                 }
                 break;
+            case QEMU_OPTION_vcpu:
+                if (!qemu_opts_parse_noisily(qemu_find_opts("vcpu-opts"),
+                                             optarg, true)) {
+                    exit(1);
+                }
+                break;
             case QEMU_OPTION_vnc:
                 vnc_parse(optarg, &error_fatal);
                 break;
@@ -4352,6 +4413,7 @@ int main(int argc, char **argv, char **envp)
         exit(1);
     }
 
+    parse_vcpu_opts(machine_class);
     /*
      * Get the default machine options from the machine if it is not already
      * specified either by the configuration file or by the command line.
