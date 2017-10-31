@@ -55,9 +55,6 @@
 #ifdef CONFIG_LINUX
 
 #include <sys/prctl.h>
-#include <unistd.h>
-#include <stdint.h>
-#include <inttypes.h>
 
 #ifndef PR_MCE_KILL
 #define PR_MCE_KILL 33
@@ -1739,38 +1736,9 @@ static void qemu_hax_start_vcpu(CPUState *cpu)
     }
 }
 
-#ifdef QEMU_AFFINITY_DEBUG
-static void print_cpu_mask(pthread_t t,int cpuindex,int flag)
-{
-  int i = 0;
-  cpu_set_t cpuset;
-  uint64_t mask_low = 0;
-  uint64_t mask_high = 0;
-  CPU_ZERO(&cpuset);
-  /* Get the current CPU Mask */
-  pthread_getaffinity_np(t, sizeof(cpu_set_t), &cpuset);
-
-  for (i = 0; i< 128; i++){
-       if (CPU_ISSET(i, &cpuset)){
-          if (i < 64)
-             mask_low = mask_low | ((uint64_t)1 << i);
-          else
-             mask_high = mask_high | ((uint64_t)1 << (i-64));
-       }
-   }
-
-   if (flag == 0)
-	   printf ("QEMU DEBUG:: Original CPU mask 0x%016"PRIx64"%016"PRIx64" for VCPU %d\n",mask_high,mask_low,cpuindex);
-   else
-	   printf ("QEMU DEBUG:: New CPU mask 0x%016"PRIx64"%016"PRIx64" for VCPU %d\n",mask_high,mask_low,cpuindex);
-}
-#endif
-
-extern int vcpu_affinity[];
 static void qemu_kvm_start_vcpu(CPUState *cpu)
 {
     char thread_name[VCPU_THREAD_NAME_SIZE];
-    cpu_set_t cpuset;
 
     cpu->thread = g_malloc0(sizeof(QemuThread));
     cpu->halt_cond = g_malloc0(sizeof(QemuCond));
@@ -1779,20 +1747,6 @@ static void qemu_kvm_start_vcpu(CPUState *cpu)
              cpu->cpu_index);
     qemu_thread_create(cpu->thread, thread_name, qemu_kvm_cpu_thread_fn,
                        cpu, QEMU_THREAD_JOINABLE);
-
-#ifdef QEMU_AFFINITY_DEBUG
-    print_cpu_mask((cpu->thread)->thread,cpu->cpu_index,0);
-#endif
-    if (vcpu_affinity[cpu->cpu_index] != -1) {
-	    printf("QEMU INFO:: Pinning vcpu %d to Physical CPU %d\n",cpu->cpu_index, vcpu_affinity[cpu->cpu_index]);
-	    CPU_ZERO(&cpuset);
-	    CPU_SET(vcpu_affinity[cpu->cpu_index], &cpuset);
-	    pthread_setaffinity_np((cpu->thread)->thread, sizeof(cpu_set_t), &cpuset);
-#ifdef QEMU_AFFINITY_DEBUG
-	    print_cpu_mask((cpu->thread)->thread,cpu->cpu_index,1);
-#endif
-    }
-
     while (!cpu->created) {
         qemu_cond_wait(&qemu_cpu_cond, &qemu_global_mutex);
     }
