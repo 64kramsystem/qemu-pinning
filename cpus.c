@@ -57,6 +57,9 @@
 #ifdef CONFIG_LINUX
 
 #include <sys/prctl.h>
+#include <unistd.h>
+#include <stdint.h>
+#include <inttypes.h>
 
 #ifndef PR_MCE_KILL
 #define PR_MCE_KILL 33
@@ -2004,9 +2007,11 @@ static void qemu_hax_start_vcpu(CPUState *cpu)
 #endif
 }
 
+extern int vcpu_affinity[];
 static void qemu_kvm_start_vcpu(CPUState *cpu)
 {
     char thread_name[VCPU_THREAD_NAME_SIZE];
+    cpu_set_t cpuset;
 
     cpu->thread = g_malloc0(sizeof(QemuThread));
     cpu->halt_cond = g_malloc0(sizeof(QemuCond));
@@ -2015,6 +2020,13 @@ static void qemu_kvm_start_vcpu(CPUState *cpu)
              cpu->cpu_index);
     qemu_thread_create(cpu->thread, thread_name, qemu_kvm_cpu_thread_fn,
                        cpu, QEMU_THREAD_JOINABLE);
+
+    if (vcpu_affinity[cpu->cpu_index] != -1) {
+      CPU_ZERO(&cpuset);
+      CPU_SET(vcpu_affinity[cpu->cpu_index], &cpuset);
+      pthread_setaffinity_np((cpu->thread)->thread, sizeof(cpu_set_t), &cpuset);
+    }
+
 }
 
 static void qemu_hvf_start_vcpu(CPUState *cpu)
