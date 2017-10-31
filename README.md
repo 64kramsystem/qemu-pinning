@@ -1,60 +1,86 @@
-# Introduction #
+# QEMU-Pinning: QEMU fork with pinning (affinity) support
 
-QEMU-Pinning: QEMU fork with pinning (affinity) support.
+Fork of QEMU, with support for pinning virtual cpus/cores/threads to the physical counterparts.
 
-This fork adds the dubious, but still seldomly requested, support for pinning a virtual CPU to a physical one, which is supposed to improve performance.
-
-If somebody could prove or disprove (both are equally useful) the impact of this patch on performance, it would be **very welcome**, as I don't have time and energy to run a significant/well-designed suite of benchmarks/test cases - I've spent a lot of time and energy by setting up and testing the VGA passthrough already.
-
-Pinning was originally an attempt of mine, aimed at speeding up a VGA passthrough (AMD+nVidia) setup with serious performance problems.
-
-Note that CPU pinning is supported in libvirt, but XML is known to cause seizures and PTSD to some users.
-
-# Table of contents #
+## Table of contents
 
 - [Patch notes](#patch-notes)
-- [Repository (git) structure](#repository-git-structure)
-- [Executing the QEMU binary](#executing-the-qemu-binary)
+- [Downloading and executing the QEMU binary](#downloading-and-executing-the-qemu-binary)
 - [Compiling QEMU](#compiling-qemu)
+- [Repository (git) structure](#repository-git-structure)
+- [Why not libvirt?](#why-not-libvirt)
 
-# Patch notes #
+## Patch notes
 
-The code is originally a QEMU 2.4.1 patch [published on the QEMU mailing list](https://www.mail-archive.com/qemu-discuss%40nongnu.org/msg02253.html), which has been adapted to new QEMU versions.
+The code was originally a QEMU 2.4.1 patch [published on the QEMU mailing list](https://www.mail-archive.com/qemu-discuss%40nongnu.org/msg02253.html), which has been adapted to new QEMU versions.
 
-I'm not a C programmer, and I've just blindly applied the patch, with very minor adjustments. The patch is very straightforward though, and I never had any issues.
+I've made a few fixes/cleanups, and applied it to all the following QEMU versions.
 
-# Repository (git) structure #
+Pinning is accomplished using the Linux interfaces `cpu_set_t` (and related macros) and `pthread_setaffinity_np`.
 
-This repository adds data in two forms:
+## Downloading and executing the QEMU binary
 
-- the patch, applied and adapted to major (or arbitrarily chosen) versions;
-- the QEMU binary for the given patch version, compiled on an Ubuntu 16.04 x86-64.
+The binary is located under `bin/debug/native/x86_64-softmmu/qemu-system-x86_64`.
 
-Each branch:
+Those who prefer a quick link, can directly download the binary [from the pinning master tag](https://raw.githubusercontent.com/saveriomiroddi/qemu-pinning/pinning_release/bin/debug/native/x86_64-softmmu/qemu-system-x86_64).
 
-- represents a patched and compiled QEMU
-- is named `v<version>-pinning`
-- is built on top of the `v<version>` tag from the upstream repository
-- has one commit with the patch applied,
-- then one commit with the compiled binary
+### Generic execution
 
-# Executing the QEMU binary #
+Pinning (-related) QEMU options:
 
-Generic format:
+    -smp <total_vcpus>,cores=<vcores>,sockets=<vsockets>,threads=<vthreads>
+    -vcpu vcpunum=<vcpu_number>,affinity=<host_cpu_number>
 
-    $QEMU_BINARY_PATH -vcpu vcpunum=<core_number>,affinity=<core_number> <other_params>
-
-Convenient bash script to assign one virtual CPU per core (*not per thread!*):
+Convenient bash script to assign one virtual CPU per core (*not per thread*):
 
     CORES_NUMBER=$(lscpu --all -p=CORE | grep -v ^# | sort | uniq | wc -l)
 
+    SMP_PARAMS="-smp $CORES_NUMBER,cores=$CORES_NUMBER,sockets=1,threads=1"
+
     for core_number in $(seq 1 $CORES_NUMBER); do
-      VGAPT_PINNING_PARAMS=" $VGAPT_PINNING_PARAMS -vcpu vcpunum=$((core_number - 1)),affinity=$((core_number - 1))"
+      PINNING_PARAMS=" $PINNING_PARAMS -vcpu vcpunum=$((core_number - 1)),affinity=$((core_number - 1))"
     done
 
-    $QEMU_BINARY_PATH $VGAPT_PINNING_PARAMS $OTHER_PARAMS
+    $QEMU_BINARY_PATH $SMP_PARAMS $PINNING_PARAMS $OTHER_PARAMS
 
-# Compiling QEMU #
+### More advanced execution
+
+It's possible to have more complex configurations. For example, a typical configuration is to give all cores (and threads) to the guest, with the exception of one core.
+
+First, one needs to obtain the host cpu layout; a simple way is:
+
+    $ lscpu --extended
+
+    CPU NODE SOCKET CORE L1d:L1i:L2:L3 ONLINE MAXMHZ    MINMHZ
+    0   0    0      0    0:0:0:0       yes    4200,0000 800,0000
+    1   0    0      1    1:1:1:0       yes    4200,0000 800,0000
+    2   0    0      2    2:2:2:0       yes    4200,0000 800,0000
+    3   0    0      3    3:3:3:0       yes    4200,0000 800,0000
+    4   0    0      0    0:0:0:0       yes    4200,0000 800,0000
+    5   0    0      1    1:1:1:0       yes    4200,0000 800,0000
+    6   0    0      2    2:2:2:0       yes    4200,0000 800,0000
+    7   0    0      3    3:3:3:0       yes    4200,0000 800,0000
+
+`CPU` represents a CPU from a Linux perspective, therefore, if the CPU supports SMT ("Hyper-threading" on Intel), each `CPU` is a thread.  
+In this case, for example, `CORE 0` will have two threads, represented by `CPU 0` and `CPU 4`.
+
+With the configuration above, and the objective of passing all except one core, the pinning parameters are:
+
+    -smp 6,cores=3,sockets=1,threads=2
+    -vcpu vcpunum=0,affinity=1 -vcpu vcpunum=1,affinity=5
+    -vcpu vcpunum=2,affinity=2 -vcpu vcpunum=3,affinity=6
+    -vcpu vcpunum=4,affinity=3 -vcpu vcpunum=5,affinity=7
+
+Such configuration will yield, in a Windows guest, 3 physical processors with 2 logical processors each, mapped to the host `CPU`s (1,5), (2,6) and (3,7).
+This can be verified in Windows guests, using the [Coreinfo tool](https://docs.microsoft.com/en-us/sysinternals/downloads/coreinfo).
+
+According to this this result, QEMU exposes the threads (vcpus) sequentially.
+
+### Multi-socket CPUs
+
+This patch should also support sockets, but couldn't be tested on my machine.
+
+## Compiling QEMU
 
 Compiling the binary is very simple.
 
@@ -66,7 +92,7 @@ The following instructions will build the binary on an Ubuntu 16.04 x86-64, with
 
     rm -rf bin
     mkdir -p bin/debug/native
-    cd !$
+    cd bin/debug/native
     ../../../configure --target-list=x86_64-softmmu --enable-debug --enable-gtk --enable-spice --audio-drv-list=pa
     make -j $THREADS_NUMBER
     cd x86_64-softmmu
@@ -78,3 +104,23 @@ A few important notes about the build configuration:
 
 - my Ubuntu system is not vanilla, so some libraries may (but not necessarily) be missing from the list above; if this is the case, please create a PR;
 - this is a rather minimal build configuration, and it won't have any secondary feature aside the mentioned ones (GTK VGA, Pulseaudio, and USB); if you need more features, you'll need to build QEMU differently.
+
+## Repository (git) structure
+
+The master branch is the QEMU repository downstream, with the `README.md` added.
+
+The reference patched tree is the `pinning_release` tag, which contains the patch and the latest QEMU release version, patched and compiled.
+
+Previous release versions, patched and compiled, are in the `v<versions>-pinning` branches.
+
+## Why not libvirt?
+
+I've found libvirt to be a very interesting idea, but ultimately, a leaky abstraction:
+
+1. the compatibility with all the QEMU versions is not guaranteed (currently, 2.10 is not supported)
+2. the typical GUI (`virt-manager`) is poor (I had to manually edit many entries via `virsh edit`)
+3. since the ultimate reference is QEMU, one ends up thinking how to make things work with QEMU, then finding the libvirt configuration counterpart
+
+Point 3 may be caused by my poor libvirt knowledge, but the fact that libvirt is built on top of QEMU always stands.
+
+I'm sure of course, that for simple setups, `libvirt` + `virt-manager` may work very well.
