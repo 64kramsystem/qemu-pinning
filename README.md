@@ -14,7 +14,7 @@ Fork of QEMU, with support for pinning virtual cpus/cores/threads to the physica
 
 The code was originally a QEMU 2.4.1 patch [published on the QEMU mailing list](https://www.mail-archive.com/qemu-discuss%40nongnu.org/msg02253.html), which has been adapted to new QEMU versions.
 
-I've made a few fixes/cleanups, and applied it to all the following QEMU versions.
+I've made a few fixes/cleanups, and applied it to all the subsequent QEMU versions.
 
 Pinning is accomplished using the Linux interfaces `cpu_set_t` (and related macros) and `pthread_setaffinity_np`.
 
