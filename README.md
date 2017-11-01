@@ -24,6 +24,8 @@ The binary is located under `bin/debug/native/x86_64-softmmu/qemu-system-x86_64`
 
 Those who prefer a quick link, can directly download the binary [from the pinning master tag](https://raw.githubusercontent.com/saveriomiroddi/qemu-pinning/pinning_release/bin/debug/native/x86_64-softmmu/qemu-system-x86_64).
 
+For displaying the patch in a single commit, see the repository structure [section](#repository-git-structure).
+
 ### Generic execution
 
 Pinning (-related) QEMU options:
@@ -112,6 +114,13 @@ The master branch is the QEMU repository downstream, with the `README.md` added.
 The reference patched tree is the `pinning_release` tag, which contains the patch and the latest QEMU release version, patched and compiled.
 
 Previous release versions, patched and compiled, are in the `v<versions>-pinning` branches.
+
+The latest patch version (applied to the latest QEMU release version) is always the `pinning_release~` commit, so it can be displayed:
+
+- from the commandline: `git show pinning_release~`
+- from the github web interface: `https://github.com/saveriomiroddi/qemu-pinning/commit/pinning_release~`
+
+Other patch versions can bee displayed using the version tag reference, e.g. `v2.9.1-pinning~`
 
 ## Why not libvirt?
 
