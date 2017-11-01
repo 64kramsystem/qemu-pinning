@@ -74,9 +74,30 @@ With the configuration above, and the objective of passing all except one core, 
     -vcpu vcpunum=4,affinity=3 -vcpu vcpunum=5,affinity=7
 
 Such configuration will yield, in a Windows guest, 3 physical processors with 2 logical processors each, mapped to the host `CPU`s (1,5), (2,6) and (3,7).
-This can be verified in Windows guests, using the [Coreinfo tool](https://docs.microsoft.com/en-us/sysinternals/downloads/coreinfo).
 
-According to this this result, QEMU exposes the threads (vcpus) sequentially.
+This can be verified in Windows guests, using the [Coreinfo tool](https://docs.microsoft.com/en-us/sysinternals/downloads/coreinfo).  
+Note that according to this this result, QEMU exposes the threads (vcpus) sequentially, and Windows interprets physical processors as contiguous blocks.
+
+The "-1 core" configuration can be be automated with an interesting exercise in scripting:
+
+    # lscpu parse format: CPU,Core,Socket,Node
+    
+    # Exclude the core 0, and cluster the threads, sorted by (socket,node)
+    CPUS_DATA=$(lscpu --all --parse | grep -vP '^(#|\d,0,0,0)' | sort -t ',' -n -k 3,2)
+    
+    THREADS=$(echo $CPUS_DATA | wc -l)
+    CORES=$(echo $CPUS_DATA | cut -d ',' -f 2 | sort | uniq | wc -l)
+    SOCKETS=$(echo $CPUS_DATA | cut -d ',' -f 3 | sort | uniq | wc -l)
+    
+    QEMU_SMP="-smp $THREADS,cores=$CORES,threads=$(($THREADS / $CORES))"
+    
+    vcpu=0; while read -a cpu_entry; do
+      affinity=$(echo $cpu_entry | cut -d ',' -f 1)
+      QEMU_AFFINITIES="$QEMU_AFFINITIES -vcpu vcpunum=$vcpu,affinity=$affinity"
+      vcpu=$(($vcpu + 1))
+    done <<< "$CPUS_DATA"
+    
+    echo "$QEMU_SMP $QEMU_AFFINITIES"
 
 ### Multi-socket CPUs
 
@@ -130,6 +151,6 @@ I've found libvirt to be a very interesting idea, but ultimately, a leaky abstra
 2. the typical GUI (`virt-manager`) is poor (I had to manually edit many entries via `virsh edit`)
 3. since the ultimate reference is QEMU, one ends up thinking how to make things work with QEMU, then finding the libvirt configuration counterpart
 
-Point 3 may be caused by my poor libvirt knowledge, but the fact that libvirt is built on top of QEMU always stands.
+Point 3 may be caused by my poor libvirt knowledge, but the fact that libvirt's functionality is built on top of QEMU always stands, and complex QEMU configurations are bound to have translation challenges.
 
 I'm sure of course, that for simple setups, `libvirt` + `virt-manager` may work very well.
