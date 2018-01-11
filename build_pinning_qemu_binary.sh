@@ -118,6 +118,8 @@ function install_dependencies {
       libfuse3-dev
       libglib2.0-dev
       libgtk-3-dev
+      libjson-c-dev # vfio-user
+      libcmocka-dev # vfio-user
       liblzo2-dev
       libnuma-dev
       libpixman-1-dev
@@ -144,10 +146,12 @@ function install_dependencies {
       fuse3-devel
       glib2-devel
       gtk3-devel
+      json-c-devel # vfio-user
       libaio-devel
       libbpf-devel
       libcap-devel
       libcap-ng-devel
+      libcmocka-devel # vfio-user
       libfdt-devel
       libiscsi-devel
       libseccomp-devel
@@ -228,6 +232,7 @@ function compile_project {
       --enable-seccomp \
       --enable-spice \
       --enable-strip \
+      --enable-vfio-user-server \
       --enable-virglrenderer \
       "${extra_configure_opts[@]}"
   fi
