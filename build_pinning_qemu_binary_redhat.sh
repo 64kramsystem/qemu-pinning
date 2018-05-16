@@ -2,7 +2,7 @@
 
 set -o errexit
 
-c_required_packages="spice-server-devel pulseaudio-libs-devel git gtk3-devel glib2-devel libfdt-devel pixman-devel zlib-devel libaio-devel libcap-devel libiscsi-devel"
+c_required_packages="libusbx-devel spice-server-devel pulseaudio-libs-devel git gtk3-devel glib2-devel libfdt-devel pixman-devel zlib-devel libaio-devel libcap-devel libiscsi-devel"
 c_binary="bin/debug/native/x86_64-softmmu/qemu-system-x86_64"
 
 echo 'Hello! This script will compile the QEMU project.'
