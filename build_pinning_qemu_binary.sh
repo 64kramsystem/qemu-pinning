@@ -2,16 +2,36 @@
 
 set -o errexit
 
-c_required_packages="libglib2.0-dev libfdt-dev libpixman-1-dev zlib1g-dev libgtk-3-dev libpulse-dev libusb-1.0-0-dev libusbredirparser-dev libspice-protocol-dev libspice-server-dev"
 c_binary="bin/debug/native/x86_64-softmmu/qemu-system-x86_64"
 
 echo 'Hello! This script will compile the QEMU project.'
 echo
 echo "It will ask sudo permissions to install the required libraries, if they're not already installed."
 echo
+echo "The script supports Ubuntu 16.04 and Fedora 28; it may work on other versions, and other distros (Debian/RHEL)."
+echo
 echo 'Press any key to continue...'
 
 read -rsn1
+
+# ID_LIKE would be a better choice, however, Fedora includes only ID.
+os_id=$(perl -ne 'print "$1" if /^ID=(.*)/' /etc/os-release)
+
+case $os_id in
+ubuntu|debian)
+  c_required_packages="libglib2.0-dev libfdt-dev libpixman-1-dev zlib1g-dev libgtk-3-dev libpulse-dev libusb-1.0-0-dev libusbredirparser-dev libspice-protocol-dev libspice-server-dev"
+  package_manager_binary=apt-get
+  ;;
+fedora|rhel)
+  c_required_packages="libusbx-devel spice-server-devel pulseaudio-libs-devel git gtk3-devel glib2-devel libfdt-devel pixman-devel zlib-devel libaio-devel libcap-devel libiscsi-devel"
+  package_manager_binary=yum
+  ;;
+*)
+  echo
+  echo "Unsupported operating system (ID=$os_id)!"
+  exit 1
+  ;;
+esac
 
 v_packages_to_install=""
 
@@ -23,7 +43,7 @@ done
 
 if [[ "$v_packages_to_install" != "" ]]; then
   echo
-  sudo apt-get install $v_packages_to_install
+  sudo "$package_manager_binary" install $v_packages_to_install
 fi
 
 echo
