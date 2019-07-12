@@ -939,14 +939,24 @@ static int slirp_smb(SlirpState* s, const char *exported_dir,
 {
     char *smb_conf;
     char *smb_cmdline;
-    struct passwd *passwd;
+    char *smb_share_user;
     FILE *f;
+#ifdef SAMBA_SHARE_TWEAKS
 
-    passwd = getpwuid(geteuid());
-    if (!passwd) {
-        error_setg(errp, "Failed to retrieve user name");
-        return -1;
+    smb_share_user = getenv("SUDO_USER");
+    if (!smb_share_user) {
+#endif
+      struct passwd *passwd;
+
+      passwd = getpwuid(geteuid());
+      if (!passwd) {
+          error_setg(errp, "Failed to retrieve user name");
+          return -1;
+      }
+      smb_share_user = passwd->pw_name;
+#ifdef SAMBA_SHARE_TWEAKS
     }
+#endif
 
     if (access(CONFIG_SMBD_COMMAND, F_OK)) {
         error_setg(errp, "Could not find '%s', please install it",
@@ -994,6 +1004,11 @@ static int slirp_smb(SlirpState* s, const char *exported_dir,
             "printing = bsd\n"
             "disable spoolss = yes\n"
             "usershare max shares = 0\n"
+#ifdef SAMBA_SHARE_TWEAKS
+            "follow symlinks = yes\n"
+            "wide links = yes\n"
+            "unix extensions = no\n"
+#endif
             "[qemu]\n"
             "path=%s\n"
             "read only=no\n"
@@ -1008,7 +1023,7 @@ static int slirp_smb(SlirpState* s, const char *exported_dir,
             s->smb_dir,
             s->smb_dir,
             exported_dir,
-            passwd->pw_name
+            smb_share_user
             );
     fclose(f);
 
