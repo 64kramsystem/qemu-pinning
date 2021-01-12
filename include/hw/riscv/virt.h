@@ -24,8 +24,13 @@
 #include "hw/block/flash.h"
 #include "qom/object.h"
 
+#ifdef RISCV_MAX_CPUS
+#define VIRT_CPUS_MAX 256
+#define VIRT_SOCKETS_MAX 256
+#else
 #define VIRT_CPUS_MAX 8
 #define VIRT_SOCKETS_MAX 8
+#endif
 
 #define TYPE_RISCV_VIRT_MACHINE MACHINE_TYPE_NAME("virt")
 typedef struct RISCVVirtState RISCVVirtState;
