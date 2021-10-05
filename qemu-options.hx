@@ -234,6 +234,16 @@ SRST
     behaviour is considered liable to change.
 ERST
 
+DEF("vcpu", HAS_ARG, QEMU_OPTION_vcpu,
+    "-vcpu [vcpunum=]n[,affinity=affinity]\n"
+    "-vcpu [vcpunum=]n[,affinity=affinity]\n", QEMU_ARCH_ALL)
+SRST
+@item -vcpu [vcpunum=]n[,affinity=affinity]
+@itemx -vcpu [vcpunum=]n[,affinity=affinity]
+@findex -vcpu
+VCPU Affinity. If specified, specify for all the CPUs.
+ERST
+
 DEF("numa", HAS_ARG, QEMU_OPTION_numa,
     "-numa node[,mem=size][,cpus=firstcpu[-lastcpu]][,nodeid=node][,initiator=node]\n"
     "-numa node[,memdev=id][,cpus=firstcpu[-lastcpu]][,nodeid=node][,initiator=node]\n"

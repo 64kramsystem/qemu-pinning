@@ -610,7 +610,10 @@ void cpus_register_accel(const AccelOpsClass *ops)
 
 void qemu_init_vcpu(CPUState *cpu)
 {
+    cpu_set_t cpuset;
     MachineState *ms = MACHINE(qdev_get_machine());
+    MachineClass *mc = MACHINE_GET_CLASS(ms);
+    unsigned vcpu = mc->vcpu_affinity[cpu->cpu_index];
 
     cpu->nr_cores = ms->smp.cores;
     cpu->nr_threads =  ms->smp.threads;
@@ -628,6 +631,22 @@ void qemu_init_vcpu(CPUState *cpu)
     /* accelerators all implement the AccelOpsClass */
     g_assert(cpus_accel != NULL && cpus_accel->create_vcpu_thread != NULL);
     cpus_accel->create_vcpu_thread(cpu);
+
+    if (vcpu != -1) {
+        /* Previously, smp_parse() was invoked before vcpu_parse().
+         * As of 6.1, this is not the case anymore; by looking statically at the
+         * code, it's not clear at which point smp_parse() is invoked, so check
+         * here.
+         */
+        if (vcpu >= ms->smp.max_cpus) {
+            fprintf(stderr, "VCPU %d exceeds maximum allowed (%d)\n", vcpu, ms->smp.max_cpus);
+            exit(1);
+        }
+
+        CPU_ZERO(&cpuset);
+        CPU_SET(vcpu, &cpuset);
+        pthread_setaffinity_np((cpu->thread)->thread, sizeof(cpu_set_t), &cpuset);
+    }
 
     while (!cpu->created) {
         qemu_cond_wait(&qemu_cpu_cond, &qemu_global_mutex);
