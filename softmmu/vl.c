@@ -1166,14 +1166,6 @@ static inline bool nonempty_str(const char *str)
     return str && *str;
 }
 
-static int vl_parse_vcpu(void *opaque, QemuOpts *opts, Error **errp)
-{
-    MachineState *ms = opaque;
-    MachineClass *mc = MACHINE_GET_CLASS(ms);
-
-    return mc->vcpu_parse(ms, opts);
-}
-
 static int parse_fw_cfg(void *opaque, QemuOpts *opts, Error **errp)
 {
     gchar *buf;
@@ -2189,10 +2181,6 @@ static void qemu_create_machine(QDict *qdict)
 
     if (machine_class->hw_version) {
         qemu_set_hw_version(machine_class->hw_version);
-    }
-
-    if (qemu_opts_foreach(qemu_find_opts("vcpu-opts"), vl_parse_vcpu, current_machine, NULL)) {
-        exit(1);
     }
 
     /*
@@ -3750,6 +3738,7 @@ void qemu_init(int argc, char **argv, char **envp)
     qemu_apply_legacy_machine_options(machine_opts_dict);
     qemu_apply_machine_options(machine_opts_dict);
     qobject_unref(machine_opts_dict);
+    parse_vcpu_opts(current_machine);
     phase_advance(PHASE_MACHINE_CREATED);
 
     /*

@@ -613,7 +613,7 @@ void qemu_init_vcpu(CPUState *cpu)
     cpu_set_t cpuset;
     MachineState *ms = MACHINE(qdev_get_machine());
     MachineClass *mc = MACHINE_GET_CLASS(ms);
-    unsigned vcpu = mc->vcpu_affinity[cpu->cpu_index];
+    unsigned affinity = mc->vcpu_affinity[cpu->cpu_index];
 
     cpu->nr_cores = ms->smp.cores;
     cpu->nr_threads =  ms->smp.threads;
@@ -632,9 +632,9 @@ void qemu_init_vcpu(CPUState *cpu)
     g_assert(cpus_accel != NULL && cpus_accel->create_vcpu_thread != NULL);
     cpus_accel->create_vcpu_thread(cpu);
 
-    if (vcpu != -1) {
+    if (affinity != -1) {
         CPU_ZERO(&cpuset);
-        CPU_SET(vcpu, &cpuset);
+        CPU_SET(affinity, &cpuset);
         pthread_setaffinity_np((cpu->thread)->thread, sizeof(cpu_set_t), &cpuset);
     }
 

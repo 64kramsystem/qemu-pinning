@@ -250,12 +250,12 @@ ERST
 
 DEF("vcpu", HAS_ARG, QEMU_OPTION_vcpu,
     "-vcpu [vcpunum=]n[,affinity=affinity]\n"
-    "-vcpu [vcpunum=]n[,affinity=affinity]\n", QEMU_ARCH_ALL)
+    "                the index of the vCPU to pin\n"
+    "                affinity= the host CPU index to pin to\n",
+        QEMU_ARCH_ALL)
 SRST
-@item -vcpu [vcpunum=]n[,affinity=affinity]
-@itemx -vcpu [vcpunum=]n[,affinity=affinity]
-@findex -vcpu
-VCPU Affinity. If specified, specify for all the CPUs.
+``-vcpu [vcpunum=]n[,affinity=affinity]``
+    VCPU Affinity. If specified, specify for all the CPUs.
 ERST
 
 DEF("numa", HAS_ARG, QEMU_OPTION_numa,

@@ -764,38 +764,36 @@ static void machine_set_smp(Object *obj, Visitor *v, const char *name,
     smp_parse(ms, config, errp);
 }
 
-static int vcpu_parse(MachineState *ms, QemuOpts *opts)
+static int vcpu_parse(void *opaque, QemuOpts *opts, Error **errp)
 {
+    MachineState *ms = opaque;
     MachineClass *mc = MACHINE_GET_CLASS(ms);
 
     if (opts) {
         unsigned vcpu = qemu_opt_get_number(opts, "vcpunum", 0);
         unsigned affinity = qemu_opt_get_number(opts,"affinity", 0);
 
-        /* Previously, smp_parse() was invoked before vcpu_parse().
-         * As of 6.1, this is not the case anymore; by looking statically at the
-         * code, it's not clear at which point smp_parse() is invoked; a remediation
-         * has been attempted (see `v6.1.0-pinning-check` branch), but it's not
-         * correct.
-         * The project is officially discontinued, so we just disable the check
-         * and warn the user (on the README).
-         */
-        // if (vcpu < ms->smp.max_cpus) {
+        if (vcpu < ms->smp.max_cpus) {
             if (mc->vcpu_affinity[vcpu] == -1) {
                 mc->vcpu_affinity[vcpu] = affinity;
             }
             else {
-                error_report("Duplicate affinity statement for vcpu %d\n", vcpu);
+                error_setg(errp, "Duplicate affinity statement for vcpu %d", vcpu);
                 return -1;
             }
-        // }
-        // else {
-        //     error_report("VCPU %d exceeds maximum allowed (%d)\n", vcpu, ms->smp.max_cpus);
-        //     return -1;
-        // }
+        }
+        else {
+            error_setg(errp, "VCPU %d exceeds maximum allowed (%d)", vcpu, ms->smp.max_cpus);
+            return -1;
+        }
     }
 
     return 0;
+}
+
+void parse_vcpu_opts(MachineState *ms)
+{
+    qemu_opts_foreach(qemu_find_opts("vcpu-opts"), vcpu_parse, ms, &error_fatal);
 }
 
 static void machine_class_init(ObjectClass *oc, void *data)
@@ -805,7 +803,6 @@ static void machine_class_init(ObjectClass *oc, void *data)
     /* Default 128 MB as guest ram size */
     mc->default_ram_size = 128 * MiB;
     mc->rom_file_has_mr = true;
-    mc->vcpu_parse = vcpu_parse;
 
     for (int i = 0; i < CPU_SETSIZE; i++)
         mc->vcpu_affinity[i] = -1;
