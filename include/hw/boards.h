@@ -36,6 +36,7 @@ void machine_set_cpu_numa_node(MachineState *machine,
                                Error **errp);
 void machine_parse_smp_config(MachineState *ms,
                               const SMPConfiguration *config, Error **errp);
+void parse_vcpu_opts(MachineState *ms);
 
 /**
  * machine_class_allow_dynamic_sysbus_dev: Add type to list of valid devices
@@ -240,6 +241,7 @@ struct MachineClass {
     int max_cpus;
     int min_cpus;
     int default_cpus;
+    int vcpu_affinity[CPU_SETSIZE];
     unsigned int no_serial:1,
         no_parallel:1,
         no_floppy:1,
