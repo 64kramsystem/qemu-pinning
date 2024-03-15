@@ -42,6 +42,7 @@ void machine_set_cpu_numa_node(MachineState *machine,
                                Error **errp);
 void machine_parse_smp_config(MachineState *ms,
                               const SMPConfiguration *config, Error **errp);
+void parse_vcpu_opts(MachineState *ms);
 unsigned int machine_topo_get_cores_per_socket(const MachineState *ms);
 unsigned int machine_topo_get_threads_per_socket(const MachineState *ms);
 void machine_memory_devices_init(MachineState *ms, hwaddr base, uint64_t size);
@@ -256,6 +257,7 @@ struct MachineClass {
     int max_cpus;
     int min_cpus;
     int default_cpus;
+    int vcpu_affinity[CPU_SETSIZE];
     unsigned int no_serial:1,
         no_parallel:1,
         no_floppy:1,
