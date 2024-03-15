@@ -506,6 +506,10 @@ static void *qemu_thread_start(void *args)
     void *arg = qemu_thread_args->arg;
     void *r;
 
+#ifdef PRINT_THREADS_IDS
+    qemu_log(" -> PID %d\n", gettid());
+#endif
+
     /* Attempt to set the threads name; note that this is for debug, so
      * we're not going to fail if we can't set it.
      */
@@ -577,6 +581,10 @@ void qemu_thread_create(QemuThread *thread, const char *name,
     qemu_thread_args->name = g_strdup(name);
     qemu_thread_args->start_routine = start_routine;
     qemu_thread_args->arg = arg;
+
+#ifdef PRINT_THREADS_IDS
+    qemu_log("Creating thread '%s'", name);
+#endif
 
     err = pthread_create(&thread->thread, &attr,
                          qemu_thread_start, qemu_thread_args);
