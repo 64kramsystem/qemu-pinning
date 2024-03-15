@@ -424,6 +424,16 @@ SRST
     to guest if it's explicitly specified in -smp.
 ERST
 
+DEF("vcpu", HAS_ARG, QEMU_OPTION_vcpu,
+    "-vcpu [vcpunum=]n[,affinity=affinity]\n"
+    "                the index of the vCPU to pin\n"
+    "                affinity= the host CPU index to pin to\n",
+        QEMU_ARCH_ALL)
+SRST
+``-vcpu [vcpunum=]n[,affinity=affinity]``
+    VCPU Affinity. If specified, specify for all the CPUs.
+ERST
+
 DEF("numa", HAS_ARG, QEMU_OPTION_numa,
     "-numa node[,mem=size][,cpus=firstcpu[-lastcpu]][,nodeid=node][,initiator=node]\n"
     "-numa node[,memdev=id][,cpus=firstcpu[-lastcpu]][,nodeid=node][,initiator=node]\n"

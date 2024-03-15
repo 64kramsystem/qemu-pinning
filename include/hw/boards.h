@@ -47,6 +47,7 @@ void machine_parse_smp_config(MachineState *ms,
 bool machine_parse_smp_cache(MachineState *ms,
                              const SmpCachePropertiesList *caches,
                              Error **errp);
+void parse_vcpu_opts(MachineState *ms);
 unsigned int machine_topo_get_cores_per_socket(const MachineState *ms);
 unsigned int machine_topo_get_threads_per_socket(const MachineState *ms);
 CpuTopologyLevel machine_get_cache_topo_level(const MachineState *ms,
@@ -282,6 +283,7 @@ struct MachineClass {
     int max_cpus;
     int min_cpus;
     int default_cpus;
+    int vcpu_affinity[CPU_SETSIZE];
     unsigned int no_serial:1,
         no_parallel:1,
         no_floppy:1,
