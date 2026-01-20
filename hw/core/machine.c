@@ -21,6 +21,7 @@
 #include "qapi/qapi-visit-machine.h"
 #include "qapi/qapi-commands-machine.h"
 #include "qemu/madvise.h"
+#include "qemu/config-file.h"
 #include "qom/object_interfaces.h"
 #include "system/cpus.h"
 #include "system/system.h"
@@ -1101,7 +1102,39 @@ out:
     return r;
 }
 
-static void machine_class_init(ObjectClass *oc, const void *data)
+static int vcpu_parse(void *opaque, QemuOpts *opts, Error **errp)
+{
+    MachineState *ms = opaque;
+    MachineClass *mc = MACHINE_GET_CLASS(ms);
+
+    if (opts) {
+        unsigned vcpu = qemu_opt_get_number(opts, "vcpunum", 0);
+        unsigned affinity = qemu_opt_get_number(opts,"affinity", 0);
+
+        if (vcpu < ms->smp.max_cpus) {
+            if (mc->vcpu_affinity[vcpu] == -1) {
+                mc->vcpu_affinity[vcpu] = affinity;
+            }
+            else {
+                error_setg(errp, "Duplicate affinity statement for vcpu %d", vcpu);
+                return -1;
+            }
+        }
+        else {
+            error_setg(errp, "VCPU %d exceeds maximum allowed (%d)", vcpu, ms->smp.max_cpus);
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+void parse_vcpu_opts(MachineState *ms)
+{
+    qemu_opts_foreach(qemu_find_opts("vcpu-opts"), vcpu_parse, ms, &error_fatal);
+}
+
+static void machine_class_init(ObjectClass *oc, void *data)
 {
     MachineClass *mc = MACHINE_CLASS(oc);
 
@@ -1114,6 +1147,9 @@ static void machine_class_init(ObjectClass *oc, const void *data)
      * 'Extended Size' field (2047Tb).
      */
     mc->smbios_memory_device_size = 2047 * TiB;
+
+    for (int i = 0; i < CPU_SETSIZE; i++)
+        mc->vcpu_affinity[i] = -1;
 
     /* numa node memory size aligned on 8MB by default.
      * On Linux, each node's border has to be 8MB aligned

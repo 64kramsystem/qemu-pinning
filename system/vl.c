@@ -727,6 +727,22 @@ static void configure_blockdev(BlockdevOptionsQueue *bdo_queue,
 
 }
 
+static QemuOptsList qemu_vcpu_opts = {
+    .name = "vcpu-opts",
+    .implied_opt_name = "vcpunum",
+    .head = QTAILQ_HEAD_INITIALIZER(qemu_vcpu_opts.head),
+    .desc = {
+        {
+            .name = "vcpunum",
+            .type = QEMU_OPT_NUMBER,
+        }, {
+            .name = "affinity",
+            .type = QEMU_OPT_NUMBER,
+        },
+        { /*End of list */ }
+    },
+};
+
 static QemuOptsList qemu_smp_opts = {
     .name = "smp-opts",
     .implied_opt_name = "cpus",
@@ -2864,6 +2880,7 @@ void qemu_init(int argc, char **argv)
     qemu_add_opts(&qemu_accel_opts);
     qemu_add_opts(&qemu_mem_opts);
     qemu_add_opts(&qemu_smp_opts);
+    qemu_add_opts(&qemu_vcpu_opts);
     qemu_add_opts(&qemu_boot_opts);
     qemu_add_opts(&qemu_add_fd_opts);
     qemu_add_opts(&qemu_object_opts);
@@ -3459,6 +3476,12 @@ void qemu_init(int argc, char **argv)
                 machine_parse_property_opt(qemu_find_opts("smp-opts"),
                                            "smp", optarg);
                 break;
+            case QEMU_OPTION_vcpu:
+                if (!qemu_opts_parse_noisily(qemu_find_opts("vcpu-opts"),
+                                             optarg, true)) {
+                    exit(1);
+                }
+                break;
 #ifdef CONFIG_VNC
             case QEMU_OPTION_vnc:
                 vnc_parse(optarg);
@@ -3774,6 +3797,7 @@ void qemu_init(int argc, char **argv)
     qemu_apply_legacy_machine_options(machine_opts_dict);
     qemu_apply_machine_options(machine_opts_dict);
     qobject_unref(machine_opts_dict);
+    parse_vcpu_opts(current_machine);
     phase_advance(PHASE_MACHINE_CREATED);
 
     /*
